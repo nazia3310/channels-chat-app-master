@@ -1,0 +1,112 @@
+{% extends "loginbase.html" %}
+{% block title %}{{receiver.first_name}} {{receiver.last_name}} | Dashboard{% endblock title %}
+
+{% block columns %}
+<div class="col-lg-9">
+    <div class="card shadow-sm">
+        <div class="card-header">
+            {{receiver.first_name}} {{receiver.last_name}}
+        </div>
+        <div class="card-body" id="message" style="height: 370px; overflow-y: auto;">
+            {% for chat in chats %}
+            {% if chat.sender.username == receiver.username and chat.receiver.username == me.username %}
+            <div class="row">
+                <h4 class=""><span class="badge bg-secondary rounded-pill">{{chat.msg}}</span></h4>
+                {% comment %} <span class="small">12:34 23rd March 2022</span> {% endcomment %}
+            </div>
+            {% endif %}
+            {% if chat.sender.username == me.username and chat.receiver.username == receiver.username %}
+            <div class="row">
+                <h4 class=""><span class="badge bg-primary float-end rounded-pill">{{chat.msg}}</span></h4>
+                {% comment %} <span class="float-end">12:34 23rd March 2022</span> {% endcomment %}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        <div class="card-footer">
+            <div class="btn-group w-100">
+                <input type="text" autofocus name="msg" id="msg" placeholder="Let's chat..." class="form-control form-control-lg">
+                <button type="button" id="send" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock columns %}
+
+{% block javascript %}
+
+{{receiver.username|json_script:"receiver-username"}}
+
+<script>
+
+    let socket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/' + JSON.parse(document.getElementById('receiver-username').textContent) + '/'
+    );
+
+    socket.onopen = function(){
+        console.log("Websocket connected");
+    }
+
+    socket.onmessage = function(event){
+        // Here code for the received data from the application
+        console.log(JSON.parse(event.data));
+        data = JSON.parse(event.data);
+
+        let span = document.createElement("span");
+        span.classList.add("badge", "rounded-pill");
+        if(data['receiver'] == JSON.parse(document.getElementById('receiver-username').textContent)){
+            span.classList.add("float-end");
+            span.classList.add("bg-primary");
+        }
+        else{
+            span.classList.add("bg-secondary");
+        }
+        span.innerHTML = data['msg'];
+        let h4 = document.createElement("h4");
+        h4.appendChild(span);
+        let row = document.createElement('div');
+        row.classList.add("row");
+        row.appendChild(h4);
+        document.getElementById("message").appendChild(row);
+
+        let box = document.getElementById("message");
+        box.scrollTop = box.scrollHeight;
+    }
+
+    socket.onclose = function(){
+        // Here code which is relevent on closing the connection from application
+        
+    }
+
+    let msg = document.getElementById("msg");
+
+    msg.onkeydown =  function(event) {
+        {% comment %} alert(event.keyCode); {% endcomment %}
+        if (event.keyCode === 13) {
+            sendMsg();
+        }
+    };
+
+    function sendMsg(){
+        socket.send(JSON.stringify({
+            'msg': msg.value,
+            'receiver': JSON.parse(document.getElementById('receiver-username').textContent)
+        }));
+        msg.value = "";
+    }
+
+    send.onclick = function(){
+        //console.log("type");
+        sendMsg();
+    }
+
+</script>
+
+<script>
+
+    let box = document.getElementById("message");
+    box.scrollTop = box.scrollHeight;
+
+</script>
+
+{% endblock javascript %}
